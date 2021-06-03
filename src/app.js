@@ -11,5 +11,9 @@ app.get("/", (req, res) => {
     res.status(200).render("placeListMap");
 });
 
+app.get("/search", (req, res) => {
+    res.status(200).render("placeListSearchPage");
+});
+
 const PORT = 8000;
 app.listen(PORT, () => console.log(`Server is running on : ${PORT}`));

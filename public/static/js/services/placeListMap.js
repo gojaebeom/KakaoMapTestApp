@@ -2,26 +2,24 @@
 // import 문법을 사용하기 위해서는 사용되는 html 파일에서 
 // script 태그의 타입으로 'module' 값을 명시해주어야 합니다.
 import { getPlacesAPI } from "../apis/places.js";
-import { createClusterer, createCustomOverlay, createMarker, kakaoEvent, kakaoMapInit, markerImgObj } from "../kakaoMap/index.js";
+import { createClusterer,  kakaoMapInit, markerImgObj } from "../kakaoMap/kakao.js";
 import { getQuerystringInfo } from "../utils/qsParser.js";
-import { destinationContainer, placeTitleContainer } from "../templates/index.js";
 import { calcDist } from "../utils/calcDist.js";
-import { loadingRenderer, removeLoadingRenderer } from "../utils/loading.js";
+import { createLoadingContainer, removeLoadingContainer } from "../utils/loading.js";
 
 // HTML 파일 내의 DOM을 모두 해석 했을 때 실행되는 이벤트 함수
 document.addEventListener("DOMContentLoaded", async ( event ) => {
     // queryObj에는 장소에 관련된 정보들이 키:값 형태로 담겨있습니다. 
     // 현재 파일에서는 type, lat, lon만 쓸 것 이므로, 구조 분해 할당으로 필요한 값만 가져옵니다.
     // 나머지 값들은 getPlacesAPI 함수에서 데이터를 요청할 때 사용됩니다.
-    const queryObj = getQuerystringInfo(); 
-    const { type, lat, lon } = queryObj;
+    const { type, lat, lon } = getQuerystringInfo(); 
 
     // placeAPI 요청보다 맵을 먼저 생성시켜줍니다. 
     // 요청의 응답이 길어질수록 맵이 화면에 보이기까지 시간이 지연되기 때문입니다.
     const map = kakaoMapInit(lat, lon);
 
     // 맵이 완전이 로딩 될 때 까지 로딩컨텐츠 보여주기
-    const loadingContainer = loadingRenderer();
+    const loadingContainer = createLoadingContainer();
 
     // 장소 리스트 API를 요청하고 정상적으로 응답 받을 경우
     // res.data.data에 데이터를 받아옵니다.
@@ -30,16 +28,27 @@ document.addEventListener("DOMContentLoaded", async ( event ) => {
 
     
     if( type.toUpperCase() === "FILTER" ) {
-        createCustomOverlay(lat, lon, map, destinationContainer(), 1.0, 0.3, false);
+        new kakao.maps.CustomOverlay({
+            content: `
+            <div id="custom-overlay">
+                <h1>목적지</h1>
+            </div>`,
+            map:map ,
+            position:new kakao.maps.LatLng(lat, lon),
+            yAnchor: 1.0,
+            xAnchor: 0.3,
+            clickable: false,
+        });
     }else {
-        createMarker(
-            lat, 
-            lon, 
-            map, 
-            markerImgObj.userMarker, 
-            markerImgObj.markerSize(34, 34), 
-            markerImgObj.options
-        );
+        new kakao.maps.Marker({
+            map: map,
+            position: new kakao.maps.LatLng(lat, lon),
+            image: new kakao.maps.MarkerImage(
+                markerImgObj.userMarker, 
+                markerImgObj.markerSize(34, 34), 
+                markerImgObj.options
+            ),
+        });
     }
 
     // 배열에 장소마커들을 모아두고 클러스터에게 전달해줍니다.
@@ -53,24 +62,37 @@ document.addEventListener("DOMContentLoaded", async ( event ) => {
     // API 를 통해 가져온 장소리스트를 순회하며 맵에 장소마커들을 표시합니다.
     // 부가적으로 마커들을 클릭하여 오버레이를 띄우거나 사라지게 하는 
     // 이벤트들을 바인딩 시키는 로직도 존재합니다.
-    placeList.map(( item , index) => {
+    placeList.map( item  => {
         const placeLat = item.lat;
         const placeLon = item.lon;
 
-        const placeMarker = createMarker(
-            placeLat, 
-            placeLon, 
-            map, 
-            markerImgObj.placeMarker, 
-            markerImgObj.markerSize(23, 32), 
-            markerImgObj.options
-        );
+        const placeMarker = new kakao.maps.Marker({
+            map: map,
+            position: new kakao.maps.LatLng(placeLat, placeLon),
+            image: new kakao.maps.MarkerImage(
+                markerImgObj.placeMarker, 
+                markerImgObj.markerSize(23, 32), 
+                markerImgObj.options
+            ),
+        });
         
         // 마커를 클릭하면 표시할 장소명 오버레이 입니다.
         // 오버레이 또한 클릭 기능이 필요하기 때문에
         // 오버레이에서 내부 돔을 찾아 클릭 이벤트를 걸어줍니다.
-        const placeTitleOverlay = createCustomOverlay(placeLat, placeLon, null, placeTitleContainer(index, item.name), 2.2, 0.5, true);
-        const placeTitleOverlayDom = placeTitleOverlay.a.querySelector("#custom-overlay");
+        const placeTitleOverlay = new kakao.maps.CustomOverlay({
+            content: 
+            `<div class="custom-overlay"> 
+                <a>
+                    <span class="title">${ item.name }</span> 
+                </a> 
+            </div>`,
+            position:new kakao.maps.LatLng(placeLat, placeLon),
+            map: null,
+            yAnchor: 2.2,
+            xAnchor: 0.5,
+            clickable: true,
+        });
+        const placeTitleOverlayDom = placeTitleOverlay.a.querySelector(".custom-overlay");
         placeTitleOverlayDom.addEventListener("click", ( event ) => {
             getResult( item );
         });
@@ -98,7 +120,9 @@ document.addEventListener("DOMContentLoaded", async ( event ) => {
         clusterMakers.push(placeMarker);
     });
 
-    removeLoadingRenderer(loadingContainer);
+    // 화면에 모든 마커정보와 이벤트가 생성되었을 때 
+    // 로딩 컨테이너를 제거시킵니다.
+    removeLoadingContainer(loadingContainer);
 
     const cluster = createClusterer( map );
     cluster.addMarkers(clusterMakers);
@@ -119,6 +143,7 @@ document.addEventListener("DOMContentLoaded", async ( event ) => {
     });
 });
 
-function getResult( data ) {
-    console.log( data );
+// 플러터로 데이터를 전달하는 함수
+function getResult(result) {
+    Print.postMessage(result);
 }

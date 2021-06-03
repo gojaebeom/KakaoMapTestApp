@@ -1,6 +1,6 @@
 const mapContainer = document.querySelector(".container");
 
-export const loadingRenderer = ( ) => {
+export const createLoadingContainer = ( ) => {
     const loadingContainer = document.createElement("div");
     loadingContainer.setAttribute("class","loadingContainer");
     loadingContainer.innerHTML = `
@@ -13,6 +13,6 @@ export const loadingRenderer = ( ) => {
     return loadingContainer;
 }
 
-export const removeLoadingRenderer = ( loadingContainer ) => {
+export const removeLoadingContainer = ( loadingContainer ) => {
     mapContainer.removeChild(loadingContainer);
 }

@@ -1,5 +1,4 @@
 "use strict";
-
 // 마커 이미지 설정
 export const markerImgObj = {
     userMarker: "https://uahage.s3.ap-northeast-2.amazonaws.com/map/path.gif",
@@ -21,26 +20,6 @@ export const kakaoMapInit = (lat, lon) => {
     };
     //지도 생성
     return new kakao.maps.Map(mapContainer, mapOption);
-}
-
-//현재위치 마커 생성
-export const createMarker = (lat, lon, map, markerImg, markerSize, options) => {
-    return new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(lat, lon),
-        image: new kakao.maps.MarkerImage(markerImg, markerSize, options),
-        map: map
-    });
-}
-
-export const createCustomOverlay = (lat, lon, map, template, yAnchor, xAnchor, clickable) => {
-    return new kakao.maps.CustomOverlay({
-        content: template,
-        map:map ,
-        position:new kakao.maps.LatLng(lat, lon),
-        yAnchor: yAnchor,
-        xAnchor: xAnchor,
-        clickable: clickable,
-    });
 }
 
 // 클러스터 생성
@@ -66,15 +45,5 @@ export const createClusterer = ( map ) => {
                 lineHeight: '50px',
             },   
         ]   
-    });
-}
-
-export const kakaoEvent = ( placeMarkers ) => {
-    kakao.maps.event.addListener(placeMarkers, "click", function() {
-        if (clickedOverlay !== null) {
-            clickedOverlay.setMap(null);
-        }
-        customOverlay.setMap(map);
-        clickedOverlay = customOverlay;
     });
 }
